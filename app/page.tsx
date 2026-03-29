@@ -1,65 +1,86 @@
-import Image from "next/image";
+'use client'
 
-export default function Home() {
+import { useMemo } from 'react'
+import { computeCityStats } from '@/lib/utils-weather'
+import { useDashboardStore } from '@/lib/store'
+import { useWeatherData } from '@/hooks/useWeatherData'
+import { DashboardHeader } from '@/components/dashboard/DashboardHeader'
+import { KPICards } from '@/components/dashboard/KPICards'
+import { LineChart } from '@/components/dashboard/LineChart'
+import { DiffBarChart } from '@/components/dashboard/DiffBarChart'
+import { HeatCalendar } from '@/components/dashboard/HeatCalendar'
+import { CityRanking } from '@/components/dashboard/CityRanking'
+import { InsightBanner } from '@/components/dashboard/InsightBanner'
+
+function Skeleton({ className }: { className?: string }) {
+  return <div className={`animate-pulse rounded-2xl bg-white/5 ${className}`} />
+}
+
+export default function DashboardPage() {
+  const { selectedCities, timeRange, metric, alertThreshold } = useDashboardStore()
+  const { data: allData, loading, usingMock } = useWeatherData()
+
+  const filteredData = useMemo(
+    () => allData.filter((d) => selectedCities.includes(d.city.id)),
+    [allData, selectedCities]
+  )
+
+  const stats = useMemo(
+    () => computeCityStats(filteredData, metric, timeRange, alertThreshold),
+    [filteredData, metric, timeRange, alertThreshold]
+  )
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+    <div className="min-h-screen bg-gray-950 text-white">
+      <DashboardHeader />
+
+      <main className="max-w-[1600px] mx-auto px-6 py-6 space-y-6">
+        {loading ? (
+          <>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28" />)}
+            </div>
+            <Skeleton className="h-14" />
+            <Skeleton className="h-96" />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <Skeleton className="h-72" />
+              <Skeleton className="h-72" />
+              <Skeleton className="h-72" />
+            </div>
+          </>
+        ) : (
+          <>
+            <KPICards stats={stats} />
+            <InsightBanner stats={stats} metric={metric} days={timeRange} />
+            <LineChart data={filteredData} metric={metric} days={timeRange} />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-1">
+                <DiffBarChart stats={stats} metric={metric} days={timeRange} />
+              </div>
+              <div className="lg:col-span-1">
+                <HeatCalendar stats={stats} metric={metric} />
+              </div>
+              <div className="lg:col-span-1">
+                <CityRanking stats={stats} />
+              </div>
+            </div>
+          </>
+        )}
+
+        <div className="flex items-center justify-center gap-2 pb-4">
+          {usingMock ? (
+            <>
+              <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 inline-block" />
+              <span className="text-yellow-600 text-xs">API 加载失败，当前展示模拟数据</span>
+            </>
+          ) : (
+            <>
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
+              <span className="text-gray-600 text-xs">数据来源：和风天气预报 + Open-Meteo 历史归档</span>
+            </>
+          )}
         </div>
       </main>
     </div>
-  );
+  )
 }
