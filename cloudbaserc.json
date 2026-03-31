@@ -1,0 +1,22 @@
+{
+  "envId": "justinchan599-5g8igqqu90a5f7f5",
+  "framework": {
+    "name": "weather-dashboard",
+    "plugins": {
+      "server": {
+        "use": "@cloudbase/framework-plugin-container",
+        "inputs": {
+          "serviceName": "weather-dashboard",
+          "servicePath": "/",
+          "localPath": "./",
+          "uploadType": "package",
+          "containerPort": 3000,
+          "envVariables": {
+            "HEFENG_API_KEY": "2e9237a68fee4a24b47ba7ae0ffd1dbf",
+            "HEFENG_API_HOST": "k94ky4m335.re.qweatherapi.com"
+          }
+        }
+      }
+    }
+  }
+}
