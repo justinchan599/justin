@@ -4,17 +4,20 @@
     "name": "weather-dashboard",
     "plugins": {
       "server": {
-        "use": "@cloudbase/framework-plugin-container",
+        "use": "@cloudbase/framework-plugin-website",
         "inputs": {
-          "serviceName": "weather-dashboard",
           "servicePath": "/",
-          "localPath": "./",
-          "uploadType": "package",
-          "containerPort": 3000,
-          "envVariables": {
-            "HEFENG_API_KEY": "2e9237a68fee4a24b47ba7ae0ffd1dbf",
-            "HEFENG_API_HOST": "k94ky4m335.re.qweatherapi.com"
-          }
+          "localPath": ".next/standalone",
+          "ignore": ["node_modules", ".git", "*.md"],
+          "router": [
+            {
+              "path": "/",
+              "target": "justinchan.fun",
+              "dnsId": "justinchan.fun.cdn.dnsv1.com",
+              "certId": "WcmaMAb1",
+              "httpsJump": true
+            }
+          ]
         }
       }
     }
