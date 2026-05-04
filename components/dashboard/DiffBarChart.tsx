@@ -77,7 +77,17 @@ export function DiffBarChart({ stats, metric, days }: DiffBarChartProps) {
       series: [
         {
           type: 'bar',
-          data: values.map((v, i) => ({ value: v, itemStyle: { color: colors[i], borderRadius: v >= 0 ? [4, 4, 0, 0] : [0, 0, 4, 4] } })),
+          data: values.map((v, i) => ({ 
+            value: v, 
+            itemStyle: { 
+              color: colors[i], 
+              borderRadius: v >= 0 ? [4, 4, 0, 0] : [0, 0, 4, 4],
+              borderWidth: primary.isMock ? 1 : 0,
+              borderType: 'dashed',
+              borderColor: 'rgba(255,255,255,0.6)',
+              opacity: primary.isMock ? 0.7 : 1,
+            } 
+          })),
           barMaxWidth: 20,
           markLine: {
             silent: true,

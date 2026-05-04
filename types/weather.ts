@@ -19,6 +19,7 @@ export interface CityWeatherData {
   city: City
   thisYear: DayWeather[]
   lastYear: DayWeather[]
+  isMock?: boolean
 }
 
 export interface TempDiff {
@@ -35,6 +36,7 @@ export interface CityStats {
   maxSingleDiff: number
   trend: 'warmer' | 'cooler' | 'normal'
   diffs: TempDiff[]
+  isMock?: boolean
 }
 
 export type MetricType = 'max' | 'min' | 'avg'

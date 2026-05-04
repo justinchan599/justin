@@ -1,77 +1,42 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { DayWeather } from '@/types/weather'
+import { NextRequest } from 'next/server'
+import { z } from 'zod'
+import { DEFAULT_CITIES } from '@/lib/mock-data'
+import { getCityWeatherData } from '@/lib/weather-service'
+import { ok, fail } from '@/lib/api-response'
 
-const HEFENG_HOST = process.env.HEFENG_API_HOST ?? 'k94ky4m335.re.qweatherapi.com'
-const HEFENG_KEY  = process.env.HEFENG_API_KEY  ?? '2e9237a68fee4a24b47ba7ae0ffd1dbf'
-const OPEN_METEO_ARCHIVE = 'https://archive-api.open-meteo.com/v1/archive'
-
-// 和风天气：今年预报（7 / 15 / 30 天）
-async function fetchHeFengForecast(locationId: string, days: number): Promise<DayWeather[]> {
-  const endpoint = days <= 7 ? '7d' : days <= 15 ? '15d' : '30d'
-  const url = `https://${HEFENG_HOST}/v7/weather/${endpoint}?location=${locationId}&key=${HEFENG_KEY}&lang=zh&unit=m`
-  const res = await fetch(url, { next: { revalidate: 3600 } })
-  if (!res.ok) throw new Error(`HeFeng ${endpoint} -> HTTP ${res.status}`)
-  const data = await res.json()
-  if (data.code !== '200' || !data.daily) throw new Error(`HeFeng code=${data.code}`)
-  return data.daily.map((d: { fxDate: string; tempMax: string; tempMin: string }) => {
-    const max = parseFloat(d.tempMax)
-    const min = parseFloat(d.tempMin)
-    return {
-      date: d.fxDate,
-      maxTemp: max,
-      minTemp: min,
-      avgTemp: parseFloat(((max + min) / 2).toFixed(1)),
-    }
-  })
-}
-
-// Open-Meteo：去年同期归档
-async function fetchArchive(lat: number, lon: number, startDate: string, endDate: string): Promise<DayWeather[]> {
-  const url = `${OPEN_METEO_ARCHIVE}?latitude=${lat}&longitude=${lon}&start_date=${startDate}&end_date=${endDate}&daily=temperature_2m_max,temperature_2m_min,temperature_2m_mean&timezone=Asia%2FShanghai`
-  const res = await fetch(url, { next: { revalidate: 86400 } })
-  if (!res.ok) throw new Error(`Open-Meteo archive -> HTTP ${res.status}`)
-  const data = await res.json()
-  if (!data.daily?.time) return []
-  const { time, temperature_2m_max, temperature_2m_min, temperature_2m_mean } = data.daily
-  return time.map((date: string, i: number) => ({
-    date,
-    maxTemp: parseFloat((temperature_2m_max[i] ?? 0).toFixed(1)),
-    minTemp: parseFloat((temperature_2m_min[i] ?? 0).toFixed(1)),
-    avgTemp: parseFloat((temperature_2m_mean[i] ?? 0).toFixed(1)),
-  }))
-}
-
-function fmt(d: Date): string {
-  return d.toISOString().split('T')[0]
-}
+const querySchema = z.object({
+  locationId: z.string().default('101010100'),
+  lat: z.coerce.number().min(-90).max(90).default(39.9042),
+  lon: z.coerce.number().min(-180).max(180).default(116.4074),
+  days: z.coerce.number().int().min(1).max(365).default(30),
+})
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl
-  const locationId = searchParams.get('locationId') ?? '101010100'
-  const lat  = parseFloat(searchParams.get('lat')  ?? '39.9042')
-  const lon  = parseFloat(searchParams.get('lon')  ?? '116.4074')
-  const days = parseInt(searchParams.get('days')   ?? '30', 10)
+  const parsed = querySchema.safeParse(Object.fromEntries(searchParams))
 
-  try {
-    // 今年：和风天气预报
-    const thisYear = await fetchHeFengForecast(locationId, days)
-
-    // 去年同期：以今天为基准，取去年同段的归档数据
-    const today = new Date()
-    const lyStart = new Date(today)
-    lyStart.setFullYear(lyStart.getFullYear() - 1)
-    const lyEnd = new Date(lyStart)
-    lyEnd.setDate(lyEnd.getDate() + days - 1)
-
-    const lastYear = await fetchArchive(lat, lon, fmt(lyStart), fmt(lyEnd))
-
-    const len = Math.min(thisYear.length, lastYear.length)
-    return NextResponse.json({
-      thisYear: thisYear.slice(0, len),
-      lastYear: lastYear.slice(0, len),
-    })
-  } catch (e) {
-    console.error('Weather API error:', e)
-    return NextResponse.json({ error: String(e) }, { status: 502 })
+  if (!parsed.success) {
+    return fail(`Invalid parameters: ${JSON.stringify(parsed.error.format())}`, 400)
   }
+
+  const { locationId, days } = parsed.data
+
+  // 根据 locationId 匹配对应城市配置，找不到则用参数构造临时城市
+  const city =
+    DEFAULT_CITIES.find((c) => c.hefengId === locationId) ?? {
+      id: 'unknown',
+      name: 'Unknown',
+      lat: parsed.data.lat,
+      lon: parsed.data.lon,
+      hefengId: locationId,
+      group: '中温区' as const,
+    }
+
+  const result = await getCityWeatherData(city, days)
+
+  return ok({
+    thisYear: result.thisYear,
+    lastYear: result.lastYear,
+    isMock: result.isMock ?? false,
+  })
 }

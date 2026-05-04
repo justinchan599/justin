@@ -33,6 +33,7 @@ export function KPICards({ stats }: KPICardsProps) {
     {
       label: '最偏暖城市',
       value: warmestCity.city.name,
+      isMock: warmestCity.isMock,
       sub: `均温高 +${warmestCity.avgDiff}°C`,
       color: 'from-orange-500/20 to-amber-500/10 border-orange-500/30',
       icon: '🌡️',
@@ -41,6 +42,7 @@ export function KPICards({ stats }: KPICardsProps) {
     {
       label: '最偏冷城市',
       value: coolestCity.city.name,
+      isMock: coolestCity.isMock,
       sub: `均温低 ${coolestCity.avgDiff}°C`,
       color: 'from-cyan-500/20 to-blue-500/10 border-cyan-500/30',
       icon: '🧊',
@@ -69,8 +71,9 @@ export function KPICards({ stats }: KPICardsProps) {
             <span className="text-gray-400 text-sm">{card.label}</span>
             <span className="text-xl">{card.icon}</span>
           </div>
-          <div className={`text-3xl font-bold ${card.valueColor} mb-1`}>
+          <div className={`text-3xl font-bold ${card.valueColor} mb-1 flex items-center gap-2`}>
             {card.value}
+            {card.isMock && <span title="真实数据加载失败，当前为模拟数据" className="text-yellow-500 text-sm cursor-help">⚠️</span>}
           </div>
           <div className="text-gray-500 text-xs">{card.sub}</div>
         </div>

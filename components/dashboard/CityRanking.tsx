@@ -25,7 +25,10 @@ export function CityRanking({ stats }: CityRankingProps) {
           return (
             <div key={stat.city.id} className="flex items-center gap-3">
               <span className="text-gray-600 text-sm w-5 text-right">{idx + 1}</span>
-              <span className="text-gray-300 text-sm w-10">{stat.city.name}</span>
+              <span className="text-gray-300 text-sm w-16 flex items-center gap-1">
+                {stat.city.name}
+                {stat.isMock && <span title="真实数据加载失败，当前为模拟数据" className="text-yellow-500 text-xs cursor-help">⚠️</span>}
+              </span>
               <div className="flex-1 relative h-6 flex items-center">
                 {/* Center baseline */}
                 <div className="absolute left-1/2 top-0 bottom-0 w-px bg-white/10" />
